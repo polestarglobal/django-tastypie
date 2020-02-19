@@ -2084,16 +2084,17 @@ class BaseModelResource(Resource):
                 # It's not a field we know about. Move along citizen.
                 continue
 
-            # Validate filter types other than 'exact' that are supported by the field type
-            try:
-                django_field_name = self.fields[field_name].attribute
-                django_field = self._meta.object_class._meta.get_field(django_field_name)
-                if hasattr(django_field, 'field'):
-                    django_field = django_field.field  # related field
-            except FieldDoesNotExist:
-                raise InvalidFilterError("The '%s' field is not a valid field name" % field_name)
-
-            query_terms = django_field.get_lookups().keys()
+            # Bodge back the old query terms.
+            #  original code was being cute and checking the available terms
+            #  from the root field (via the queryset's meta) but that only lists
+            #  the terms available on the root object, not any relations
+            query_terms = {
+                'exact', 'iexact', 'contains', 'icontains', 'gt', 'gte', 'lt',
+                'lte', 'in', 'startswith', 'istartswith', 'endswith',
+                'iendswith', 'range', 'year', 'month', 'day', 'week_day',
+                'hour', 'minute', 'second', 'isnull', 'search', 'regex',
+                'iregex',
+            }
             if len(filter_bits) and filter_bits[-1] in query_terms:
                 filter_type = filter_bits.pop()
 
